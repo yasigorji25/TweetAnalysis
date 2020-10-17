@@ -16,8 +16,9 @@ export default function pie() {
 function ShowPieChart() {
     const [pieDataTrump, setPieDataTrump] = useState([]);
     const [pieDataBiden, setPieDataBiden] = useState([]);
+    
     let { hashtag } = useParams();
-
+    console.log(hashtag);
 
     const dataTrump = {
         labels: [
@@ -86,12 +87,12 @@ function ShowPieChart() {
     useEffect(() => {
         fetch(`/sentiment/${hashtag}`)
             .then(res => res.json())
-            .then(data => setPieDataTrump(data.TrumpFeedback) & setPieDataBiden(data.BidenFeedback)
+            .then(data => setPieDataTrump(data.TrumpFeedback) & setPieDataBiden(data.BidenFeedback) & console.log('get from')
             );
 
 
 
-    }, []);
+    }, [hashtag]);
     return (
         <div>
             <h3> Feedback for #{hashtag} </h3>
