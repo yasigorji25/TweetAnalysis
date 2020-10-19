@@ -9,6 +9,7 @@ const analyzer = new Sentiment('English', stemmer, 'afinn');
 const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
 const axios = require('axios');
+const sw = require('stopword');
 
 require('dotenv').config();
 var AWS = require("aws-sdk");
@@ -150,10 +151,14 @@ router.get('/sentiment/:hashtag', (req, res) => {
           let negativeCounter = 0;
           let positiveCounter = 0;
           let neutralCounter = 0;
+          let newtxt = ''
           //let tokens = [];
           //console.log(responseTrump)
           responseTrump.data.forEach(item => {
-            let sentiment_score = analyzer.getSentiment(tokenizer.tokenize(item.text));
+            //console.log(item.text.split(' ')));
+            newtxt = item.text.slice(0,item.text.search('(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]'));
+            console.log(newtxt)
+            let sentiment_score = analyzer.getSentiment(sw.removeStopwords(tokenizer.tokenize(item.text)));
             let support = '';
             if (sentiment_score >= 0.05) {
               support = 'positive';
