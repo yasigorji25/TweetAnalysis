@@ -12,6 +12,7 @@
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "install": "^0.13.0",
+    "keyword-extractor": "0.0.19",
     "natural": "^2.1.5",
     "needle": "^2.5.2",
     "node-fetch": "^2.6.1",

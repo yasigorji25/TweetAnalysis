@@ -10,6 +10,7 @@ const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
 const axios = require('axios');
 const sw = require('stopword');
+var keyword_extractor = require("keyword-extractor");
 
 require('dotenv').config();
 var AWS = require("aws-sdk");
@@ -105,7 +106,7 @@ router.get('/sentiment/:hashtag', (req, res) => {
       other = 'Biden'
     }
     // Edit query parameters below
-    query = '#' + hashtag + ' lang:en entity:' + candidate + ' -entity:' + other + ' -is:retweet'
+    query = 'entity:' + hashtag + ' lang:en entity:' + candidate + ' -entity:' + other + ' -is:retweet' + ' -has:media -has:links	'
     const params = {
       'query': query,
       'max_results': 100
@@ -123,18 +124,19 @@ router.get('/sentiment/:hashtag', (req, res) => {
       throw new Error('Unsuccessful request')
     }
   }
+  
   (async () => {
 
     try {
       // Get Trump tweets
       const currentTime = parseInt(Date.now() / 60 / 60 / 1000);
-      
+
       const s3Key = `twitter-${req.params.hashtag}-${currentTime}`;
       console.log(s3Key)
       const params = { Bucket: bucketName, Key: s3Key };
       //60 * 60 * 1000
       return new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, async (err, result) => {
-        if (result) {
+        if (false) {
           // Serve from S3
           console.log('s3');
           const resultJSON = JSON.parse(result.Body);
@@ -148,24 +150,39 @@ router.get('/sentiment/:hashtag', (req, res) => {
           let resultBiden = [];
           let trumpFeedback = [];
           let bidenFeedback = [];
+          let trumpPosKeywords = [];
+          let trumpNegKeywords = [];
+          let bidenPosKeywords = [];
+          let bidenNegKeywords = [];
+
           let negativeCounter = 0;
           let positiveCounter = 0;
           let neutralCounter = 0;
-          let newtxt = ''
+          //let newtxt = ''
           //let tokens = [];
           //console.log(responseTrump)
           responseTrump.data.forEach(item => {
             //console.log(item.text.split(' ')));
-            newtxt = item.text.slice(0,item.text.search('(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]'));
-            console.log(newtxt)
+            let newtxt = item.text.slice(0, item.text.search('(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]'));
+            //console.log(newtxt)
             let sentiment_score = analyzer.getSentiment(sw.removeStopwords(tokenizer.tokenize(item.text)));
+            let extraction_result = keyword_extractor.extract(item.text, {
+              language: "english",
+              remove_digits: true,
+              return_changed_case: true,
+              remove_duplicates: false
+            });
+            //console.log(extraction_result)
+            
             let support = '';
             if (sentiment_score >= 0.05) {
               support = 'positive';
               positiveCounter++;
+              trumpPosKeywords = trumpPosKeywords.concat(extraction_result);
             } else if (sentiment_score <= -0.05) {
               support = 'negative';
               negativeCounter++;
+              trumpNegKeywords = trumpNegKeywords.concat(extraction_result);
             } else {
               support = 'neutral';
               neutralCounter++;
@@ -185,18 +202,46 @@ router.get('/sentiment/:hashtag', (req, res) => {
           negativeCounter = 0;
           positiveCounter = 0;
           neutralCounter = 0;
+          let trumpPosCount = trumpPosKeywords.reduce(function (acc, curr) {
+            if (typeof acc[curr] == 'undefined') {
+              acc[curr] = 1;
+            } else {
+              acc[curr] += 1;
+            }
+          
+            return acc;
+          }, {});
+          let trumpNegCount = trumpNegKeywords.reduce(function (acc, curr) {
+            if (typeof acc[curr] == 'undefined') {
+              acc[curr] = 1;
+            } else {
+              acc[curr] += 1;
+            }
+          
+            return acc;
+          }, {});
           // Get Biden tweets
           const responseBiden = await getTweets(req.params.hashtag, 'Biden');
           responseBiden.data.forEach(item => {
 
             let sentiment_score = analyzer.getSentiment(tokenizer.tokenize(item.text));
+            let extraction_result = keyword_extractor.extract(item.text, {
+              language: "english",
+              remove_digits: true,
+              return_changed_case: true,
+              remove_duplicates: false
+            });
+            //console.log(extraction_result)
+            
             let support = '';
             if (sentiment_score >= 0.05) {
               support = 'positive';
               positiveCounter++;
+              bidenPosKeywords = bidenPosKeywords.concat(extraction_result);
             } else if (sentiment_score <= -0.05) {
               support = 'negative';
               negativeCounter++;
+              bidenNegKeywords = bidenNegKeywords.concat(extraction_result);
             } else {
               support = 'neutral';
               neutralCounter++;
@@ -213,10 +258,31 @@ router.get('/sentiment/:hashtag', (req, res) => {
           bidenFeedback.push(
             positiveCounter, negativeCounter, neutralCounter
           )
-          twitter_results = { "Trump": resultTrump, "Biden": resultBiden, "TrumpFeedback": trumpFeedback, "BidenFeedback": bidenFeedback };
+          let bidenPosCount = bidenPosKeywords.reduce(function (acc, curr) {
+            if (typeof acc[curr] == 'undefined') {
+              acc[curr] = 1;
+            } else {
+              acc[curr] += 1;
+            }
+          
+            return acc;
+          }, {});
+          let bidenNegCount = bidenNegKeywords.reduce(function (acc, curr) {
+            if (typeof acc[curr] == 'undefined') {
+              acc[curr] = 1;
+            } else {
+              acc[curr] += 1;
+            }
+          
+            return acc;
+          }, {});
+
+          twitter_results = { "Trump": resultTrump, "Biden": resultBiden, "TrumpFeedback": trumpFeedback, "BidenFeedback": bidenFeedback , 
+            'Keywords': {'TrumpPositive':trumpPosCount, 'TrumpNegative':trumpNegCount, 'BidenPositive':bidenPosCount, 'BidenNegative':bidenNegCount}};
+
           const objectParams = { Bucket: bucketName, Key: s3Key, Body: JSON.stringify(twitter_results) };
           const uploadPromise = new AWS.S3({ apiVersion: '2006-03-01' }).putObject(objectParams).promise();
-                    uploadPromise.then(function (data) {
+          uploadPromise.then(function (data) {
             console.log("Successfully uploaded data to " + bucketName + "/" + s3Key);
           });
           res.send(twitter_results);
