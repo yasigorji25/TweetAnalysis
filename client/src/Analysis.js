@@ -45,15 +45,6 @@ const Example = (props) => {
                 </Col>
 
             </Row>
-            {/* <Row>
-                <Col xs="6" sm="4" />
-                <Col xs="6" sm="4" >
-                    <span className="vs">
-                        <p size="40">VS</p>
-                    </span>
-                </Col>
-
-            </Row> */}
         </Container >
     );
 }
