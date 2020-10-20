@@ -10,7 +10,9 @@ const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
 const axios = require('axios');
 const sw = require('stopword');
-var keyword_extractor = require("keyword-extractor");
+const fs = require('fs');
+const AFFIN = JSON.parse(fs.readFileSync('./AFINN.json', 'utf8'));
+const keyword_extractor = require("keyword-extractor");
 
 require('dotenv').config();
 var AWS = require("aws-sdk");
@@ -106,7 +108,7 @@ router.get('/sentiment/:hashtag', (req, res) => {
       other = 'Biden'
     }
     // Edit query parameters below
-    query = 'entity:' + hashtag + ' lang:en entity:' + candidate + ' -entity:' + other + ' -is:retweet' + ' -has:media -has:links	'
+    query = '#' + hashtag + ' lang:en entity:' + candidate + ' -entity:' + other + ' -is:retweet' + ' -has:media -has:links	'
     const params = {
       'query': query,
       'max_results': 100
@@ -124,7 +126,11 @@ router.get('/sentiment/:hashtag', (req, res) => {
       throw new Error('Unsuccessful request')
     }
   }
-  
+
+  function rateWord(word) {
+    return (word in AFFIN) ? AFFIN[word] : 0;
+  }
+
   (async () => {
 
     try {
@@ -155,6 +161,11 @@ router.get('/sentiment/:hashtag', (req, res) => {
           let bidenPosKeywords = [];
           let bidenNegKeywords = [];
 
+          let trumpPosWordCloud = [];
+          let trumpNegWordCloud = [];
+          let bidenPosWordCloud = [];
+          let bidenNegWordCloud = [];
+
           let negativeCounter = 0;
           let positiveCounter = 0;
           let neutralCounter = 0;
@@ -163,7 +174,7 @@ router.get('/sentiment/:hashtag', (req, res) => {
           //console.log(responseTrump)
           responseTrump.data.forEach(item => {
             //console.log(item.text.split(' ')));
-            let newtxt = item.text.slice(0, item.text.search('(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]'));
+            //let newtxt = item.text.slice(0, item.text.search('(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]'));
             //console.log(newtxt)
             let sentiment_score = analyzer.getSentiment(sw.removeStopwords(tokenizer.tokenize(item.text)));
             let extraction_result = keyword_extractor.extract(item.text, {
@@ -173,7 +184,7 @@ router.get('/sentiment/:hashtag', (req, res) => {
               remove_duplicates: false
             });
             //console.log(extraction_result)
-            
+
             let support = '';
             if (sentiment_score >= 0.05) {
               support = 'positive';
@@ -203,23 +214,46 @@ router.get('/sentiment/:hashtag', (req, res) => {
           positiveCounter = 0;
           neutralCounter = 0;
           let trumpPosCount = trumpPosKeywords.reduce(function (acc, curr) {
-            if (typeof acc[curr] == 'undefined') {
-              acc[curr] = 1;
+            if (typeof acc[stemmer.stem(curr)] == 'undefined') {
+              if (Object.keys(AFFIN).indexOf(curr) > -1) {
+
+                acc[stemmer.stem(curr)] = 1;
+              }
             } else {
-              acc[curr] += 1;
+              acc[stemmer.stem(curr)] += 1;
             }
-          
+
             return acc;
           }, {});
+          for (let key in trumpPosCount) {
+            let dic = {
+              "text": key,
+              "value": trumpPosCount[key]
+            };
+            trumpPosWordCloud.push(dic);
+
+          }
+
           let trumpNegCount = trumpNegKeywords.reduce(function (acc, curr) {
-            if (typeof acc[curr] == 'undefined') {
-              acc[curr] = 1;
+            if (typeof acc[stemmer.stem(curr)] == 'undefined') {
+              if (Object.keys(AFFIN).indexOf(curr) > -1) {
+                acc[stemmer.stem(curr)] = 1;
+              }
             } else {
-              acc[curr] += 1;
+              acc[stemmer.stem(curr)] += 1;
             }
-          
+
             return acc;
           }, {});
+
+          for (let key in trumpNegCount) {
+            let dic = {
+              "text": key,
+              "value": trumpNegCount[key]
+            };
+            trumpNegWordCloud.push(dic);
+
+          }
           // Get Biden tweets
           const responseBiden = await getTweets(req.params.hashtag, 'Biden');
           responseBiden.data.forEach(item => {
@@ -232,7 +266,7 @@ router.get('/sentiment/:hashtag', (req, res) => {
               remove_duplicates: false
             });
             //console.log(extraction_result)
-            
+
             let support = '';
             if (sentiment_score >= 0.05) {
               support = 'positive';
@@ -259,26 +293,48 @@ router.get('/sentiment/:hashtag', (req, res) => {
             positiveCounter, negativeCounter, neutralCounter
           )
           let bidenPosCount = bidenPosKeywords.reduce(function (acc, curr) {
-            if (typeof acc[curr] == 'undefined') {
-              acc[curr] = 1;
+            if (typeof acc[stemmer.stem(curr)] == 'undefined') {
+              if (Object.keys(AFFIN).indexOf(curr) > -1) {
+                acc[stemmer.stem(curr)] = 1;
+              }
             } else {
-              acc[curr] += 1;
+              acc[stemmer.stem(curr)] += 1;
             }
-          
-            return acc;
-          }, {});
-          let bidenNegCount = bidenNegKeywords.reduce(function (acc, curr) {
-            if (typeof acc[curr] == 'undefined') {
-              acc[curr] = 1;
-            } else {
-              acc[curr] += 1;
-            }
-          
-            return acc;
-          }, {});
 
-          twitter_results = { "Trump": resultTrump, "Biden": resultBiden, "TrumpFeedback": trumpFeedback, "BidenFeedback": bidenFeedback , 
-            'Keywords': {'TrumpPositive':trumpPosCount, 'TrumpNegative':trumpNegCount, 'BidenPositive':bidenPosCount, 'BidenNegative':bidenNegCount}};
+            return acc;
+          }, {});
+          for (let key in bidenPosCount) {
+            let dic = {
+              "text": key,
+              "value": bidenPosCount[key]
+            };
+            bidenPosWordCloud.push(dic);
+
+          }
+
+          let bidenNegCount = bidenNegKeywords.reduce(function (acc, curr) {
+            if (typeof acc[stemmer.stem(curr)] == 'undefined') {
+              if (Object.keys(AFFIN).indexOf(curr) > -1) {
+                acc[stemmer.stem(curr)] = 1;
+              }
+            } else {
+              acc[stemmer.stem(curr)] += 1;
+            }
+
+            return acc;
+          }, {});
+          for (let key in bidenNegCount) {
+            let dic = {
+              "text": key,
+              "value": bidenNegCount[key]
+            };
+            bidenNegWordCloud.push(dic);
+
+          }
+          twitter_results = {
+            "Trump": resultTrump, "Biden": resultBiden, "TrumpFeedback": trumpFeedback, "BidenFeedback": bidenFeedback,
+            'Keywords': { 'TrumpPositive': trumpPosWordCloud, 'TrumpNegative': trumpNegWordCloud, 'BidenPositive': bidenPosWordCloud, 'BidenNegative': bidenNegWordCloud }
+          };
 
           const objectParams = { Bucket: bucketName, Key: s3Key, Body: JSON.stringify(twitter_results) };
           const uploadPromise = new AWS.S3({ apiVersion: '2006-03-01' }).putObject(objectParams).promise();
