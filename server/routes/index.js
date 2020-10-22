@@ -14,9 +14,13 @@ const fs = require('fs');
 const AFFIN = JSON.parse(fs.readFileSync('./AFINN.json', 'utf8'));
 const keyword_extractor = require("keyword-extractor");
 const wordnet = new natural.WordNet();
-var lemmatize = require( 'wink-lemmatizer' );
+const lemmatize = require('wink-lemmatizer');
+const redis = require('redis');
 
-console.log(lemmatize.adjective( 'supports' ));
+const redisClient = redis.createClient();
+redisClient.on('error', (err) => {
+  console.log("Error " + err);
+});
 
 require('dotenv').config();
 var AWS = require("aws-sdk");
@@ -145,166 +149,181 @@ router.get('/sentiment/:hashtag', (req, res) => {
       console.log(s3Key)
       const params = { Bucket: bucketName, Key: s3Key };
       //60 * 60 * 1000
-      return new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, async (err, result) => {
-        if (false) {
-          // Serve from S3
-          console.log('s3');
-          const resultJSON = JSON.parse(result.Body);
+      redisClient.get(s3Key, (err, result) => {
+        if (result) {
+          // Serve from Cache
+          console.log('redis')
+          const resultJSON = JSON.parse(result);
           return res.status(200).json(resultJSON);
-
         } else {
-          console.log('twitter');
-          const responseTrump = await getTweets(req.params.hashtag, 'Trump');
-          //console.log(responseTrump);
-          let resultTrump = [];
-          let resultBiden = [];
-          let trumpFeedback = [];
-          let bidenFeedback = [];
-          let trumpPosKeywords = [];
-          let trumpNegKeywords = [];
-          let bidenPosKeywords = [];
-          let bidenNegKeywords = [];
+          new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, async (err, result) => {
+            if (result) {
+              // Serve from S3
+              console.log('s3');
+              const resultJSON = JSON.parse(result.Body);
+              redisClient.setex(s3Key, 3600, JSON.stringify({ source: 'Redis Cache', ...resultJSON, }));
+              return res.status(200).json(resultJSON);
+              
 
-          let trumpWordCloud = [];
-          let bidenWordCloud = [];
-
-          let negativeCounter = 0;
-          let positiveCounter = 0;
-          let neutralCounter = 0;
-          //let newtxt = ''
-          //let tokens = [];
-          //console.log(responseTrump)
-          responseTrump.data.forEach(item => {
-            //console.log(item.text.split(' ')));
-            //let newtxt = item.text.slice(0, item.text.search('(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]'));
-            //console.log(newtxt)
-            let sentiment_score = analyzer.getSentiment(sw.removeStopwords(tokenizer.tokenize(item.text)));
-            let extraction_result = keyword_extractor.extract(item.text, {
-              language: "english",
-              remove_digits: true,
-              return_changed_case: true,
-              remove_duplicates: false
-            });
-            //console.log(extraction_result)
-
-            let support = '';
-            if (sentiment_score >= 0.05) {
-              support = 'positive';
-              positiveCounter++;
-              trumpPosKeywords = trumpPosKeywords.concat(extraction_result);
-            } else if (sentiment_score <= -0.05) {
-              support = 'negative';
-              negativeCounter++;
-              trumpNegKeywords = trumpNegKeywords.concat(extraction_result);
             } else {
-              support = 'neutral';
-              neutralCounter++;
-            }
+              console.log('twitter');
+              const responseTrump = await getTweets(req.params.hashtag, 'Trump');
+              //console.log(responseTrump);
+              let resultTrump = [];
+              let resultBiden = [];
+              let trumpFeedback = [];
+              let bidenFeedback = [];
+              let trumpPosKeywords = [];
+              let trumpNegKeywords = [];
+              let bidenPosKeywords = [];
+              let bidenNegKeywords = [];
 
-            dic = {
-              "id": item.id,
-              "text": item.text,
-              "sentiment_score": sentiment_score,
-              'sentiment': support
-            };
-            resultTrump.push(dic);
-          })
-          trumpFeedback.push(
-            positiveCounter, negativeCounter, neutralCounter
-          )
-          negativeCounter = 0;
-          positiveCounter = 0;
-          neutralCounter = 0;
-          let trumpCount = trumpPosKeywords.concat(trumpNegKeywords).reduce(function (acc, curr) {
-            if (typeof acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] == 'undefined') {
-              if (Object.keys(AFFIN).indexOf(curr) > -1) {
+              let trumpWordCloud = [];
+              let bidenWordCloud = [];
 
-                acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] = 1;
+              let negativeCounter = 0;
+              let positiveCounter = 0;
+              let neutralCounter = 0;
+              //let newtxt = ''
+              //let tokens = [];
+              //console.log(responseTrump)
+              responseTrump.data.forEach(item => {
+                //console.log(item.text.split(' ')));
+                //let newtxt = item.text.slice(0, item.text.search('(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]'));
+                //console.log(newtxt)
+                let sentiment_score = analyzer.getSentiment(sw.removeStopwords(tokenizer.tokenize(item.text)));
+                let extraction_result = keyword_extractor.extract(item.text, {
+                  language: "english",
+                  remove_digits: true,
+                  return_changed_case: true,
+                  remove_duplicates: false
+                });
+                //console.log(extraction_result)
+
+                let support = '';
+                if (sentiment_score >= 0.05) {
+                  support = 'positive';
+                  positiveCounter++;
+                  trumpPosKeywords = trumpPosKeywords.concat(extraction_result);
+                } else if (sentiment_score <= -0.05) {
+                  support = 'negative';
+                  negativeCounter++;
+                  trumpNegKeywords = trumpNegKeywords.concat(extraction_result);
+                } else {
+                  support = 'neutral';
+                  neutralCounter++;
+                }
+
+                dic = {
+                  "id": item.id,
+                  "text": item.text,
+                  "sentiment_score": sentiment_score,
+                  'sentiment': support
+                };
+                resultTrump.push(dic);
+              })
+              trumpFeedback.push(
+                positiveCounter, negativeCounter, neutralCounter
+              )
+              negativeCounter = 0;
+              positiveCounter = 0;
+              neutralCounter = 0;
+              let trumpCount = trumpPosKeywords.concat(trumpNegKeywords).reduce(function (acc, curr) {
+                if (typeof acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] == 'undefined') {
+                  if (Object.keys(AFFIN).indexOf(curr) > -1) {
+
+                    acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] = 1;
+                  }
+                } else {
+                  acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] += 1;
+                }
+
+                return acc;
+              }, {});
+              for (let key in trumpCount) {
+                let dic = {
+                  "text": key,
+                  "value": trumpCount[key]
+                };
+                trumpWordCloud.push(dic);
+
               }
-            } else {
-              acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] += 1;
-            }
 
-            return acc;
-          }, {});
-          for (let key in trumpCount) {
-            let dic = {
-              "text": key,
-              "value": trumpCount[key]
-            };
-            trumpWordCloud.push(dic);
+              // Get Biden tweets
+              const responseBiden = await getTweets(req.params.hashtag, 'Biden');
+              responseBiden.data.forEach(item => {
 
-          }
+                let sentiment_score = analyzer.getSentiment(tokenizer.tokenize(item.text));
+                let extraction_result = keyword_extractor.extract(item.text, {
+                  language: "english",
+                  remove_digits: true,
+                  return_changed_case: true,
+                  remove_duplicates: false
+                });
+                //console.log(extraction_result)
 
-          // Get Biden tweets
-          const responseBiden = await getTweets(req.params.hashtag, 'Biden');
-          responseBiden.data.forEach(item => {
+                let support = '';
+                if (sentiment_score >= 0.05) {
+                  support = 'positive';
+                  positiveCounter++;
+                  bidenPosKeywords = bidenPosKeywords.concat(extraction_result);
+                } else if (sentiment_score <= -0.05) {
+                  support = 'negative';
+                  negativeCounter++;
+                  bidenNegKeywords = bidenNegKeywords.concat(extraction_result);
+                } else {
+                  support = 'neutral';
+                  neutralCounter++;
+                }
 
-            let sentiment_score = analyzer.getSentiment(tokenizer.tokenize(item.text));
-            let extraction_result = keyword_extractor.extract(item.text, {
-              language: "english",
-              remove_digits: true,
-              return_changed_case: true,
-              remove_duplicates: false
-            });
-            //console.log(extraction_result)
+                dic = {
+                  "id": item.id,
+                  "text": item.text,
+                  "sentiment_score": sentiment_score,
+                  'sentiment': support
+                };
+                resultBiden.push(dic);
+              })
+              bidenFeedback.push(
+                positiveCounter, negativeCounter, neutralCounter
+              )
+              let bidenCount = bidenPosKeywords.concat(bidenNegKeywords).reduce(function (acc, curr) {
+                if (typeof acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] == 'undefined') {
+                  if (Object.keys(AFFIN).indexOf(curr) > -1) {
+                    acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] = 1;
+                  }
+                } else {
+                  acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] += 1;
+                }
 
-            let support = '';
-            if (sentiment_score >= 0.05) {
-              support = 'positive';
-              positiveCounter++;
-              bidenPosKeywords = bidenPosKeywords.concat(extraction_result);
-            } else if (sentiment_score <= -0.05) {
-              support = 'negative';
-              negativeCounter++;
-              bidenNegKeywords = bidenNegKeywords.concat(extraction_result);
-            } else {
-              support = 'neutral';
-              neutralCounter++;
-            }
+                return acc;
+              }, {});
+              for (let key in bidenCount) {
+                let dic = {
+                  "text": key,
+                  "value": bidenCount[key]
+                };
+                bidenWordCloud.push(dic);
 
-            dic = {
-              "id": item.id,
-              "text": item.text,
-              "sentiment_score": sentiment_score,
-              'sentiment': support
-            };
-            resultBiden.push(dic);
-          })
-          bidenFeedback.push(
-            positiveCounter, negativeCounter, neutralCounter
-          )
-          let bidenCount = bidenPosKeywords.concat(bidenNegKeywords).reduce(function (acc, curr) {
-            if (typeof acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] == 'undefined') {
-              if (Object.keys(AFFIN).indexOf(curr) > -1) {
-                acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] = 1;
               }
-            } else {
-              acc[lemmatize.adjective(lemmatize.noun(lemmatize.verb(curr)))] += 1;
+
+              twitter_results = {
+                "Trump": resultTrump, "Biden": resultBiden, "TrumpFeedback": trumpFeedback, "BidenFeedback": bidenFeedback,
+                'Keywords': { 'TrumpWordCloud': trumpWordCloud, 'BidenWordCloud': bidenWordCloud }
+              };
+
+              const objectParams = { Bucket: bucketName, Key: s3Key, Body: JSON.stringify(twitter_results) };
+              const uploadPromise = new AWS.S3({ apiVersion: '2006-03-01' }).putObject(objectParams).promise();
+              uploadPromise.then(function (data) {
+                console.log("Successfully uploaded data to " + bucketName + "/" + s3Key);
+              });
+
+              // Serve from Wikipedia API and store in cache
+              redisClient.setex(s3Key, 3600, JSON.stringify({ source: 'Redis Cache', ...twitter_results, }));
+
+              res.send(twitter_results);
             }
-
-            return acc;
-          }, {});
-          for (let key in bidenCount) {
-            let dic = {
-              "text": key,
-              "value": bidenCount[key]
-            };
-            bidenWordCloud.push(dic);
-
-          }
-
-          twitter_results = {
-            "Trump": resultTrump, "Biden": resultBiden, "TrumpFeedback": trumpFeedback, "BidenFeedback": bidenFeedback,
-            'Keywords': { 'TrumpWordCloud': trumpWordCloud, 'BidenWordCloud': bidenWordCloud}
-          };
-
-          const objectParams = { Bucket: bucketName, Key: s3Key, Body: JSON.stringify(twitter_results) };
-          const uploadPromise = new AWS.S3({ apiVersion: '2006-03-01' }).putObject(objectParams).promise();
-          uploadPromise.then(function (data) {
-            console.log("Successfully uploaded data to " + bucketName + "/" + s3Key);
           });
-          res.send(twitter_results);
         }
       });
     } catch (e) {
