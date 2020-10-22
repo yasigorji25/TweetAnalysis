@@ -92,7 +92,7 @@ function ShowPieChart() {
 
         fetch(`/sentiment/${hashtag}`)
             .then(res => res.json())
-            .then(data => setPieDataTrump(data.TrumpFeedback) & setPieDataBiden(data.BidenFeedback) & setWordsTP(data.Keywords.TrumpPositive)
+            .then(data => setPieDataTrump(data.TrumpFeedback) & setPieDataBiden(data.BidenFeedback) & setWordsTP(data.Keywords.TrumpWordCloud)
             );
 
 

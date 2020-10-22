@@ -15,6 +15,7 @@
     "fs": "0.0.1-security",
     "install": "^0.13.0",
     "keyword-extractor": "0.0.19",
+    "lemmatizer": "0.0.1",
     "natural": "^2.1.5",
     "needle": "^2.5.2",
     "node-fetch": "^2.6.1",
@@ -24,7 +25,8 @@
     "request": "^2.88.2",
     "request-promise": "^4.2.6",
     "response-time": "^2.3.2",
-    "stopword": "^1.0.3"
+    "stopword": "^1.0.3",
+    "wink-lemmatizer": "^3.0.2"
   },
   "devDependencies": {},
   "scripts": {
