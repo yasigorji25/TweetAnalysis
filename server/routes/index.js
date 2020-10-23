@@ -16,7 +16,27 @@ const keyword_extractor = require("keyword-extractor");
 const wordnet = new natural.WordNet();
 const lemmatize = require('wink-lemmatizer');
 const redis = require('redis');
+/*
+var RedisClustr = require('redis-clustr');
 
+const redisClient = new RedisClustr({
+  servers: [
+      {
+          host: 'n10296255-a2-redis.km2jzi.clustercfg.apse2.cache.amazonaws.com',
+          port: 6379
+      }
+  ],
+  createClient: function (port, host) {
+      // this is the default behaviour
+      return redis.createClient(port, host);
+  }
+});
+
+
+redisClient.set("framework", "AngularJS", function (err, reply) {
+  console.log("redis.set " , reply);
+});
+*/
 const redisClient = redis.createClient();
 redisClient.on('error', (err) => {
   console.log("Error " + err);
@@ -182,18 +202,18 @@ router.get('/sentiment/:hashtag', (req, res) => {
       console.log(s3Key)
       const params = { Bucket: bucketName, Key: s3Key };
       //60 * 60 * 1000
-      redisClient.get(s3Key, (err, result) => {
-        if (false) {
+      redisClient.get(s3Key, async (err, result) => {
+        if (result) {
           // Serve from Cache
-          console.log('redis')
+          console.log('redis');
 
           const resultJSON = JSON.parse(result);
-          const twitter_results = getResponse(resultJSON.responseTrump, resultJSON.responseBiden);
+          const twitter_results = await getResponse(resultJSON.responseTrump, resultJSON.responseBiden);
 
           return res.status(200).json(twitter_results);
         } else {
           new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, async (err, result) => {
-            if (false) {
+            if (result) {
               // Serve from S3
               console.log('s3');
               const resultJSON = JSON.parse(result.Body);
