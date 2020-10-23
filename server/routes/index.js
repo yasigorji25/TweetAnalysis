@@ -17,6 +17,7 @@ const wordnet = new natural.WordNet();
 const lemmatize = require('wink-lemmatizer');
 const redis = require('redis');
 /*
+
 var RedisClustr = require('redis-clustr');
 
 const redisClient = new RedisClustr({
@@ -37,7 +38,10 @@ redisClient.set("framework", "AngularJS", function (err, reply) {
   console.log("redis.set " , reply);
 });
 */
-const redisClient = redis.createClient();
+//const redisClient = redis.createClient();
+
+const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true }); //creates a new client
+
 redisClient.on('error', (err) => {
   console.log("Error " + err);
 });
