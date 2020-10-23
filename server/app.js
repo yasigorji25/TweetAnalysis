@@ -18,6 +18,10 @@ app.get('/', (req, res) => {
 
 app.use('/',router); 
 
+app.use((req, res) => {
+    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+  })
+  
 app.listen(port, function () {
     console.log(`Express app listening at http://${hostname}:${port}/`);
 });
