@@ -183,17 +183,17 @@ router.get('/sentiment/:hashtag', (req, res) => {
       const params = { Bucket: bucketName, Key: s3Key };
       //60 * 60 * 1000
       redisClient.get(s3Key, (err, result) => {
-        if (1 != 1) {
+        if (false) {
           // Serve from Cache
           console.log('redis')
 
           const resultJSON = JSON.parse(result);
-          const twitter_results = await getResponse(resultJSON.responseTrump, resultJSON.responseBiden);
+          const twitter_results = getResponse(resultJSON.responseTrump, resultJSON.responseBiden);
 
           return res.status(200).json(twitter_results);
         } else {
           new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, async (err, result) => {
-            if (result) {
+            if (false) {
               // Serve from S3
               console.log('s3');
               const resultJSON = JSON.parse(result.Body);

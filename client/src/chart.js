@@ -126,7 +126,7 @@ function ShowPieChart() {
                 setWordsB(data.Keywords.BidenWordCloud)
             );
 
-    }, []);
+    }, [hashtag]);
     const callbacksT = {
         getWordTooltip: wordsTP => `${wordsTP.text} (${wordsTP.value * 15})`,
     }
