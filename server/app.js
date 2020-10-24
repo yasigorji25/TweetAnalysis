@@ -4,7 +4,7 @@ const path = require('path');
 const app = express();
 
 const hostname = '127.0.0.1';
-const port = 3001;
+const port = 3000;
 
 app.use(express.static('../client/build'))
 
