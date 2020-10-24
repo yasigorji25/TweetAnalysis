@@ -16,28 +16,7 @@ const keyword_extractor = require("keyword-extractor");
 const wordnet = new natural.WordNet();
 const lemmatize = require('wink-lemmatizer');
 const redis = require('redis');
-/*
 
-var RedisClustr = require('redis-clustr');
-
-const redisClient = new RedisClustr({
-  servers: [
-      {
-          host: 'n10296255-a2-redis.km2jzi.clustercfg.apse2.cache.amazonaws.com',
-          port: 6379
-      }
-  ],
-  createClient: function (port, host) {
-      // this is the default behaviour
-      return redis.createClient(port, host);
-  }
-});
-
-
-redisClient.set("framework", "AngularJS", function (err, reply) {
-  console.log("redis.set " , reply);
-});
-*/
 //const redisClient = redis.createClient();
 
 const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true }); //creates a new client
@@ -210,11 +189,11 @@ router.get('/sentiment/:hashtag', (req, res) => {
         if (result) {
           // Serve from Cache
           console.log('redis');
-
+          
           const resultJSON = JSON.parse(result);
           const twitter_results = await getResponse(resultJSON.responseTrump, resultJSON.responseBiden);
 
-          return res.status(200).json(twitter_results);
+          res.send(twitter_results);
         } else {
           new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, async (err, result) => {
             if (result) {
@@ -223,7 +202,7 @@ router.get('/sentiment/:hashtag', (req, res) => {
               const resultJSON = JSON.parse(result.Body);
               const twitter_results = await getResponse(resultJSON.responseTrump, resultJSON.responseBiden);
               redisClient.setex(s3Key, 3600, JSON.stringify({ source: 'Redis Cache', ...resultJSON, }));
-              res.status(200).json(twitter_results);
+              res.send(twitter_results);
             } else {
               console.log('twitter');
               // Get Trump tweets
@@ -239,7 +218,7 @@ router.get('/sentiment/:hashtag', (req, res) => {
               });
 
               // Serve from Wikipedia API and store in cache
-              redisClient.setex(s3Key, 3600, JSON.stringify({ source: 'Redis Cache', ...twitter_results, }));
+              redisClient.setex(s3Key, 3600, JSON.stringify({ source: 'Redis Cache', ...{'responseTrump':responseTrump,'responseBiden':responseBiden}, }));
 
               res.send(twitter_results);
             }
