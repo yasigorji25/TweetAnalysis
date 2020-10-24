@@ -164,7 +164,6 @@ function ShowPieChart() {
             <Col sm="4" />
         </Row>
         <Row>
-
             <Col xs="6" sm="4">
                 <Image src={trumpImg} roundedCircle width="171" height="180" />
                 <h3>Trump</h3>

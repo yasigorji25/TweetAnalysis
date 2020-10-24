@@ -14,9 +14,9 @@ const lemmatize = require('wink-lemmatizer');
 const redis = require('redis');
 
 // redis localhost
-//const redisClient = redis.createClient();
+const redisClient = redis.createClient();
 // aws elasticache
-const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true });
+//const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true });
 
 redisClient.on('error', (err) => {
   console.log("Error " + err);
@@ -48,6 +48,70 @@ bucketPromise.then(function (data) {
 const token = 'AAAAAAAAAAAAAAAAAAAAAF0zIgEAAAAADFW0UWDGP3X3gK4e1ldfjSBBYxE%3DIOFKXbD7Ix0iRaD2YQCi4zCxYNrk7TGZcjHhGNyPtRq08wvtHh';
 
 const endpointUrl = 'https://api.twitter.com/2/tweets/search/recent'
+
+router.get('/line/:query', (req, res) => {
+  (async () => {
+      console.log('query');
+      const currentTime = parseInt(Date.now() / 60 / 60 / 1000);
+      const hashtagList = ['election', 'democrates', 'politics', 'republican'];
+      let sentiResLine = [];
+      console.log(currentTime)
+      for (let i = currentTime - 168; i <= currentTime; i++) {
+        let date = new Date(i * 60 * 60 * 1000);
+        if (i % 24 == 0) {
+          // counters for count number of tweets
+          const time = new Date(date.toString().substring(0, 15)).getTime() / 60 / 60 / 1000;
+
+          let negativeCounterTrump = 0;
+          let positiveCounterTrump = 0;
+          let negativeCounterBiden = 0;
+          let positiveCounterBiden = 0;
+
+          //timestamp = (i*60*60*1000).getTime()
+          for (let j = 0; j < 1; j++) {
+            const s3Key = `twitter-${hashtagList[j]}-${time}`;
+            const params_line = { Bucket: bucketName, Key: s3Key };
+            try {
+              const result = await new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params_line).promise();
+
+              const resultJSON = JSON.parse(result.Body);
+              const responseTrump = resultJSON.Trump;
+              const responseBiden = resultJSON.Biden;
+              responseTrump.forEach(item => {
+                if (item.sentiment === 'positive') {
+                  positiveCounterTrump++;
+                } if (item.sentiment === 'negative') {
+                  negativeCounterTrump++
+                }
+              })
+              responseBiden.forEach(item => {
+                if (item.sentiment === 'positive') {
+                  positiveCounterBiden++;
+                } if (item.sentiment === 'negative') {
+                  negativeCounterBiden++
+                }
+              })
+              //const headCode = await s3.headObject(params).promise();
+              //const signedUrl = s3.getSignedUrl('getObject', params);
+              // Do something with signedUrl
+            } catch (headErr) {
+              if (headErr.code === 'NotFound') {
+                // Handle no object on cloud here  
+              }
+            }
+          }
+          dic = {
+            "Trump_sentiment": positiveCounterTrump - negativeCounterTrump,
+            "Biden_sentiment": positiveCounterBiden - negativeCounterBiden,
+            "date": date,
+          };
+          sentiResLine.push(dic);
+        }
+      };
+      res.send(sentiResLine);
+    
+  })
+})
 
 router.get('/sentiment/:hashtag', (req, res) => {
   // get tweets from twitter api
@@ -92,7 +156,6 @@ router.get('/sentiment/:hashtag', (req, res) => {
     let negativeCounter = 0;
     let positiveCounter = 0;
     let neutralCounter = 0;
-
     // each tweet from twtiter api endpoint response
     response.data.forEach(item => {
       let sentiment_score = analyzer.getSentiment(sw.removeStopwords(tokenizer.tokenize(item.text)));
@@ -169,23 +232,87 @@ router.get('/sentiment/:hashtag', (req, res) => {
     const bidenFeedback = resBiden.feedback
     const bidenWordCloud = resBiden.wordCloud
 
-    twitter_results = {
+    const twitter_results = {
       "Trump": resultTrump, "Biden": resultBiden, "TrumpFeedback": trumpFeedback, "BidenFeedback": bidenFeedback,
       'Keywords': { 'TrumpWordCloud': trumpWordCloud, 'BidenWordCloud': bidenWordCloud }
     };
     return twitter_results
   }
+
+  async function lineData(currentTime) {
+
+  }
+
   (async () => {
     try {
       // set s3key by hashtag and a hour timestamp
       const currentTime = parseInt(Date.now() / 60 / 60 / 1000);
+
       const s3Key = `twitter-${req.params.hashtag}-${currentTime}`;
-      console.log(s3Key)
+      const redisKey = `twitter-${req.params.hashtag}`;
+
       const params = { Bucket: bucketName, Key: s3Key };
 
-      redisClient.get(s3Key, async (err, result) => {
+      const hashtagList = ['election', 'democrates', 'politics', 'republican'];
+      let sentiResLine = [];
+
+      for (let i = currentTime - 168; i <= currentTime; i++) {
+        let date = new Date(i * 60 * 60 * 1000);
+        if (i % 24 == 0) {
+          // counters for count number of tweets
+          const time = new Date(date.toString().substring(0, 15)).getTime() / 60 / 60 / 1000;
+
+          let negativeCounterTrump = 0;
+          let positiveCounterTrump = 0;
+          let negativeCounterBiden = 0;
+          let positiveCounterBiden = 0;
+
+          //timestamp = (i*60*60*1000).getTime()
+          for (let j = 0; j < 1; j++) {
+            const s3Key = `twitter-${hashtagList[j]}-${time}`;
+            const params_line = { Bucket: bucketName, Key: s3Key };
+            try {
+              const result = await new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params_line).promise();
+
+              const resultJSON = JSON.parse(result.Body);
+              const responseTrump = resultJSON.Trump;
+              const responseBiden = resultJSON.Biden;
+              responseTrump.forEach(item => {
+                if (item.sentiment === 'positive') {
+                  positiveCounterTrump++;
+                } if (item.sentiment === 'negative') {
+                  negativeCounterTrump++
+                }
+              })
+              responseBiden.forEach(item => {
+                if (item.sentiment === 'positive') {
+                  positiveCounterBiden++;
+                } if (item.sentiment === 'negative') {
+                  negativeCounterBiden++
+                }
+              })
+              //const headCode = await s3.headObject(params).promise();
+              //const signedUrl = s3.getSignedUrl('getObject', params);
+              // Do something with signedUrl
+            } catch (headErr) {
+              if (headErr.code === 'NotFound') {
+                // Handle no object on cloud here  
+              }
+            }
+          }
+          dic = {
+            "Trump_sentiment": positiveCounterTrump - negativeCounterTrump,
+            "Biden_sentiment": positiveCounterBiden - negativeCounterBiden,
+            "date": date,
+          };
+          sentiResLine.push(dic);
+        }
+      };
+      console.log(sentiResLine)
+
+      redisClient.get(redisKey, async (err, result) => {
         // Check if a result got in 1 hour in the cache, if true, use the data, if not, try get data from s3
-        if (result) {
+        if (false) {
           // Serve from Cache
           console.log('redis');
           const resultJSON = JSON.parse(result);
@@ -194,15 +321,17 @@ router.get('/sentiment/:hashtag', (req, res) => {
         } else {
           new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params, async (err, result) => {
             // Check if a result got in 1 hour in the s3 bucket, if true, use the data and store the data in cache
-            if (result) {
+            if (false) {
               // Serve from S3
               console.log('s3');
               const resultJSON = JSON.parse(result.Body);
               const twitter_results = await getResponse(resultJSON.responseTrump, resultJSON.responseBiden);
-              redisClient.setex(s3Key, 3600, JSON.stringify({ source: 'Redis Cache', ...resultJSON, }));
+              redisClient.setex(redisKey, 3600, JSON.stringify({ source: 'Redis Cache', ...resultJSON, }));
               res.send(twitter_results);
             } else {
               // If cannot find data from cache or s3, get tweets from twitter api endpoint
+              const aaa = await lineData(currentTime);
+
               console.log('twitter');
               // Get Trump tweets
               const responseTrump = await getTweets(req.params.hashtag, 'Trump');
@@ -211,14 +340,14 @@ router.get('/sentiment/:hashtag', (req, res) => {
               const twitter_results = await getResponse(responseTrump, responseBiden);
 
               // Serve from Twitter API and store in s3
-              const objectParams = { Bucket: bucketName, Key: s3Key, Body: JSON.stringify({ 'responseTrump': responseTrump, 'responseBiden': responseBiden }) };
+              const objectParams = { Bucket: bucketName, Key: s3Key, Body: JSON.stringify(twitter_results) };
               const uploadPromise = new AWS.S3({ apiVersion: '2006-03-01' }).putObject(objectParams).promise();
               uploadPromise.then(function (data) {
                 console.log("Successfully uploaded data to " + bucketName + "/" + s3Key);
               });
               // Serve from Twitter API and store in cache
-              redisClient.setex(s3Key, 3600, JSON.stringify({ source: 'Redis Cache', ...{ 'responseTrump': responseTrump, 'responseBiden': responseBiden }, }));
-
+              redisClient.setex(redisKey, 3600, JSON.stringify({ source: 'Redis Cache', ...{ 'responseTrump': responseTrump, 'responseBiden': responseBiden }, }));
+              console.log(twitter_results)
               res.send(twitter_results);
             }
           });
