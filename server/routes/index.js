@@ -76,11 +76,9 @@ router.get('/line', (req, res) => {
             try {
               const result = await new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params_line).promise();
               console.log(s3Key);
-              console.log(JSON.parse(result.Body));
               const resultJSON = JSON.parse(result.Body);
               const responseTrump = resultJSON.Trump;
               const responseBiden = resultJSON.Biden;
-              console.log(responseTrump);
 
               responseTrump.forEach(item => {
                 if (item.sentiment === 'positive') {
