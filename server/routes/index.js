@@ -35,19 +35,6 @@ AWS.config.getCredentials(function (err) {
 });
 
 const bucketName = 'n10296255-assignment-store';
-// connect to s3
-/*
-try {
-  const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01', region: 'ap-southeast-2' }).createBucket({ Bucket: bucketName }).promise();
-  bucketPromise.then(function (data) {
-    console.log("Successfully created " + bucketName);
-  }).catch(function (err) {
-
-  });
-} catch (e) {
-
-}
-*/
 
 const token = 'AAAAAAAAAAAAAAAAAAAAAF0zIgEAAAAADFW0UWDGP3X3gK4e1ldfjSBBYxE%3DIOFKXbD7Ix0iRaD2YQCi4zCxYNrk7TGZcjHhGNyPtRq08wvtHh';
 
@@ -68,14 +55,12 @@ router.get('/line', (req, res) => {
           let positiveCounterTrump = 0;
           let negativeCounterBiden = 0;
           let positiveCounterBiden = 0;
-          console.log(i)
           //timestamp = (i*60*60*1000).getTime()
           for (let j = 0; j < hashtagList.length; j++) {
             const s3Key = `twitter-${hashtagList[j]}-${i}`;
             const params_line = { Bucket: bucketName, Key: s3Key };
             try {
               const result = await new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params_line).promise();
-              console.log(s3Key);
               const resultJSON = JSON.parse(result.Body);
               const responseTrump = resultJSON.Trump;
               const responseBiden = resultJSON.Biden;
@@ -94,9 +79,6 @@ router.get('/line', (req, res) => {
                   negativeCounterBiden++
                 }
               })
-              //const headCode = await s3.headObject(params).promise();
-              //const signedUrl = s3.getSignedUrl('getObject', params);
-              // Do something with signedUrl
             } catch (headErr) {
               if (headErr.code === 'NotFound') {
                 // Handle no object on cloud here  
@@ -108,7 +90,6 @@ router.get('/line', (req, res) => {
             "Biden_sentiment": positiveCounterBiden - negativeCounterBiden,
             "date": date,
           };
-          console.log(dic);
 
           sentiResLine.push(dic);
         }
@@ -255,8 +236,6 @@ router.get('/sentiment/:hashtag', (req, res) => {
       const s3Key = `twitter-${req.params.hashtag}-${currentTime}`;
       const redisKey = `twitter-${req.params.hashtag}`;
 
-      //const params = { Bucket: bucketName, Key: s3Key };
-
       redisClient.get(redisKey, async (err, result) => {
         // Check if a result got in 1 hour in the cache, if true, use the data, if not, try get data from s3
         if (result) {
@@ -282,7 +261,6 @@ router.get('/sentiment/:hashtag', (req, res) => {
           });
           // Serve from Twitter API and store in cache
           redisClient.setex(redisKey, 3600, JSON.stringify({ source: 'Redis Cache', ...{ 'responseTrump': responseTrump, 'responseBiden': responseBiden }, }));
-
           res.send(twitter_results);
         }
       });

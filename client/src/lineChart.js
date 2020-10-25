@@ -40,7 +40,7 @@ export default function Line() {
                         };
                     })
                 )
-                .then(histories => setRowData(histories) & console.log(histories))
+                .then(histories => setRowData(histories))
         )
     }, []);
 
