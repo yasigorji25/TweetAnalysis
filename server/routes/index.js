@@ -75,7 +75,7 @@ router.get('/line', (req, res) => {
           let positiveCounterTrump = 0;
           let negativeCounterBiden = 0;
           let positiveCounterBiden = 0;
-
+          console.log(time)
           //timestamp = (i*60*60*1000).getTime()
           for (let j = 0; j < hashtagList.length; j++) {
             const s3Key = `twitter-${hashtagList[j]}-${time}`;
@@ -114,6 +114,8 @@ router.get('/line', (req, res) => {
             "Biden_sentiment": positiveCounterBiden - negativeCounterBiden,
             "date": date,
           };
+          console.log(dic);
+
           sentiResLine.push(dic);
         }
       };
