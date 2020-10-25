@@ -14,9 +14,9 @@ const lemmatize = require('wink-lemmatizer');
 const redis = require('redis');
 
 // redis localhost
-//const redisClient = redis.createClient();
+const redisClient = redis.createClient();
 // aws elasticache
-const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true });
+//const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true });
 
 redisClient.on('error', (err) => {
   console.log("Error " + err);

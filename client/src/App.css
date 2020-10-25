@@ -39,7 +39,7 @@
 .vs {
   color: rgb(179, 8, 8);
   font-size: 60px;
-  text-align: center;
-  padding: 100px;
-  vertical-align: text-bottom;
+  /* text-align: center;
+  margin-top: 200px;
+  vertical-align: text-bottom; */
 }

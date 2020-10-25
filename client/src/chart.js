@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Pie } from 'react-chartjs-2';
-import { Button, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem, Container, Row, Col } from 'reactstrap';
+import { Button, Dropdown, DropdownToggle, DropdownMenu, DropdownItem, Container, Row, Col } from 'reactstrap';
 import Image from 'react-bootstrap/Image'
 import trumpImg from './trump.jpg'
 import bidenImg3 from './biden3.jpg'
@@ -34,6 +34,10 @@ function ShowPieChart() {
     const [wordsTP, setWordsTP] = useState([]);
     const [wordsB, setWordsB] = useState([]);
     const [hashtag, setHashtag] = useState();
+    const [legendDisplay, setLegendDisplay] = useState(false);
+    const toggle = () => setDropdownOpen(prevState => !prevState);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+
     const history = useHistory();
 
     const dataTrump = {
@@ -62,7 +66,7 @@ function ShowPieChart() {
     const optionT = {
         legend: {
             position: 'left',
-
+            display: legendDisplay,
             labels: {
                 padding: 20
             }
@@ -87,7 +91,7 @@ function ShowPieChart() {
     const optionB = {
         legend: {
             position: 'right',
-
+            display:legendDisplay,
             labels: {
                 padding: 20
 
@@ -132,12 +136,12 @@ function ShowPieChart() {
     };
     const size = [600, 400];
 
-    const toggle = () => console.log();
-
     const handleChange = event => {
+        setLegendDisplay(true);
+
         setWordsTP([]);
         setWordsB([]);
-        setHashtag(event.target.value);
+        setHashtag('Feedback for #'+event.target.value);
         fetch(`/sentiment/${event.target.value}`)
             .then(res => res.json())
             .then(data => setPieDataTrump(data.TrumpFeedback) & setPieDataBiden(data.BidenFeedback) & setWordsTP(data.Keywords.TrumpWordCloud) &
@@ -154,17 +158,20 @@ function ShowPieChart() {
                 <Row>
                     <Col xs="6" sm="4" />
                     <Col xs="6" sm="4" >
-                        <ButtonDropdown isOpen={true} toggle={toggle}>
-                            <DropdownToggle caret disabled>
-                                Select hashtag
-                    </DropdownToggle>
+                        <Dropdown isOpen={true} toggle={toggle}>
+                        <DropdownToggle
+                            tag="b"
+                            data-toggle="dropdown"
+                        >
+                            ** Select a hashtag **
+                        </DropdownToggle>
                             <DropdownMenu>
                                 <DropdownItem name="election" value="election" onClick={handleChange}># Election</DropdownItem>
                                 <DropdownItem name="democrats" value="democrats" onClick={handleChange}># Democrats</DropdownItem>
                                 <DropdownItem name="politics" value="politics" onClick={handleChange}># Politics</DropdownItem>
                                 <DropdownItem name="republican" value="republican" onClick={handleChange}># Republican</DropdownItem>
                             </DropdownMenu>
-                        </ButtonDropdown>
+                        </Dropdown>
                     </Col>
                     <Col sm="4" />
                 </Row>
@@ -175,7 +182,6 @@ function ShowPieChart() {
                     </Col>
                     <Col xs="6" sm="4" >
                         <span className="vs">
-                            <p size="40">VS</p>
                         </span>
                     </Col>
                     <Col sm="4">
@@ -184,9 +190,17 @@ function ShowPieChart() {
                     </Col>
 
                 </Row>
+
+                <Row>                    
+                    <Col xs="6" sm="12" >
+                        <span className="vs">
+                            <p size="40">VS</p>
+                        </span>
+                    </Col>
+                </Row>
             </Container >
             <div>
-                <h3> Feedback for #{hashtag} </h3>
+                <h3> {hashtag} </h3>
                 <Row style={{ 'width': '100%' }}>
                     <Col xs="4">
                         <Pie data={dataTrump} width={150}
@@ -198,7 +212,7 @@ function ShowPieChart() {
                             words={wordsTP} />
                     </Col>
                     <Col xs="4">
-                        <Button color="primary" onClick={handleClickLine}>See the support trend</Button>{' '}
+                        <Button color="primary" onClick={handleClickLine}> Historical Search</Button>{' '}
                     </Col>
                     <Col xs="4">
                         <Pie data={dataBiden} width={150}

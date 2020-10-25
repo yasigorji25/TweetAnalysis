@@ -3,12 +3,13 @@ import { AgChartsReact } from 'ag-charts-react';
 import { trackPromise } from 'react-promise-tracker';
 import Loader from 'react-loader-spinner';
 import { usePromiseTracker } from "react-promise-tracker";
+import {Button} from "reactstrap";
+import { useHistory } from "react-router-dom"
 
 export default function Line() {
     const [rowData, setRowData] = useState([]);
-    // store all stocks at first and change while searching
-    // get stock symbol by url
-    // const pathName = "http://131.181.190.87:3001/history" + location.search;
+    const history = useHistory();
+
     const LoadingIndicator = props => {
         const { promiseInProgress } = usePromiseTracker();
 
@@ -60,11 +61,16 @@ export default function Line() {
 
 
     }
-
+    const handleClickLine = event => {
+        history.push("/");
+    }
     return (
         <main>
+            <Button style={{'float':'left'}}color="primary" onClick={handleClickLine}>Go Back</Button>{' '}
+
             <AgChartsReact options={options} />
             <LoadingIndicator />
+
         </main>
     )
 }
