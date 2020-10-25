@@ -48,7 +48,7 @@ try {
 
 }
 */
-const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01', region: 'ap-southeast-2' }).createBucket({ Bucket: bucketName }).promise();
+const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01' }).createBucket({ Bucket: bucketName }).promise();
 bucketPromise.then(function (data) {
   console.log("Successfully created " + bucketName);
 })
