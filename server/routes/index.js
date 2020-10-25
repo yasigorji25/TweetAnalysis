@@ -34,7 +34,7 @@ AWS.config.getCredentials(function (err) {
   }
 });
 
-const bucketName = 'n10296255-assignment-store';
+const bucketName = 'n10296255-a2-store';
 // connect to s3
 /*
 try {
