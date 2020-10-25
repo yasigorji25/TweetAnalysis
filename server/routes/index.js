@@ -36,6 +36,7 @@ AWS.config.getCredentials(function (err) {
 
 const bucketName = 'n10296255-assignment-store';
 // connect to s3
+/*
 try {
   const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01', region: 'ap-southeast-2' }).createBucket({ Bucket: bucketName }).promise();
   bucketPromise.then(function (data) {
@@ -46,14 +47,15 @@ try {
 } catch (e) {
 
 }
-/*
+*/
+const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01', region: 'ap-southeast-2' }).createBucket({ Bucket: bucketName }).promise();
 bucketPromise.then(function (data) {
   console.log("Successfully created " + bucketName);
 })
   .catch(function (err) {
     console.error(err, err.stack);
   });
-*/
+
 const token = 'AAAAAAAAAAAAAAAAAAAAAF0zIgEAAAAADFW0UWDGP3X3gK4e1ldfjSBBYxE%3DIOFKXbD7Ix0iRaD2YQCi4zCxYNrk7TGZcjHhGNyPtRq08wvtHh';
 
 const endpointUrl = 'https://api.twitter.com/2/tweets/search/recent'
