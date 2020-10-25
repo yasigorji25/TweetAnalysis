@@ -46,7 +46,7 @@ export default function Line() {
     const options = {
         data: rowData,
         title: {
-            text: 'Trend of Support',
+            text: 'Historical Search Trend',
             fontSize: 18,
         },
         series: [{

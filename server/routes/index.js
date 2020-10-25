@@ -14,9 +14,9 @@ const lemmatize = require('wink-lemmatizer');
 const redis = require('redis');
 
 // redis localhost
-//const redisClient = redis.createClient();
+const redisClient = redis.createClient();
 // aws elasticache
-const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true });
+//const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true });
 
 redisClient.on('error', (err) => {
   console.log("Error " + err);
@@ -63,15 +63,15 @@ router.get('/line', (req, res) => {
         let date = new Date(i * 60 * 60 * 1000);
         if (i % 24 == 0) {
           // counters for count number of tweets
-          const time = new Date(date.toString().substring(0, 15)).getTime() / 60 / 60 / 1000;
+          //const time = new Date(date.toString().substring(0, 15)).getTime() / 60 / 60 / 1000;
           let negativeCounterTrump = 0;
           let positiveCounterTrump = 0;
           let negativeCounterBiden = 0;
           let positiveCounterBiden = 0;
-          console.log(time)
+          console.log(i)
           //timestamp = (i*60*60*1000).getTime()
           for (let j = 0; j < hashtagList.length; j++) {
-            const s3Key = `twitter-${hashtagList[j]}-${time}`;
+            const s3Key = `twitter-${hashtagList[j]}-${i}`;
             const params_line = { Bucket: bucketName, Key: s3Key };
             try {
               const result = await new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params_line).promise();
