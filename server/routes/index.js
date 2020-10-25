@@ -14,9 +14,9 @@ const lemmatize = require('wink-lemmatizer');
 const redis = require('redis');
 
 // redis localhost
-const redisClient = redis.createClient();
+//const redisClient = redis.createClient();
 // aws elasticache
-//const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true });
+const redisClient = redis.createClient(6379, 'trump-biden.km2jzi.ng.0001.apse2.cache.amazonaws.com'  ,  { no_ready_check:  true });
 
 redisClient.on('error', (err) => {
   console.log("Error " + err);
@@ -48,13 +48,12 @@ try {
 
 }
 */
-const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01', region: 'ap-southeast-2' }).createBucket({ Bucket: bucketName }).promise();
-bucketPromise.then(function (data) {
-  console.log("Successfully created " + bucketName);
-})
-  .catch(function (err) {
-    console.error(err, err.stack);
-  });
+
+
+  new AWS.S3({ apiVersion: '2006-03-01' }).getObject({ Bucket: bucketName, Key: 'twitter-politics-445441'}, async (err, result) => {
+    // Check if a result got in 1 hour in the s3 bucket, if true, use the data and store the data in cache
+    console.log(JSON.parse(result.Body));
+    })
 
 const token = 'AAAAAAAAAAAAAAAAAAAAAF0zIgEAAAAADFW0UWDGP3X3gK4e1ldfjSBBYxE%3DIOFKXbD7Ix0iRaD2YQCi4zCxYNrk7TGZcjHhGNyPtRq08wvtHh';
 
