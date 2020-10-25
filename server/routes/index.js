@@ -34,7 +34,7 @@ AWS.config.getCredentials(function (err) {
   }
 });
 
-const bucketName = 'n10296255-a2-store';
+const bucketName = 'n10296255-assignment-store';
 // connect to s3
 /*
 try {
@@ -48,7 +48,7 @@ try {
 
 }
 */
-const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01' }).createBucket({ Bucket: bucketName }).promise();
+const bucketPromise = new AWS.S3({ apiVersion: '2006-03-01', region: 'ap-southeast-2' }).createBucket({ Bucket: bucketName }).promise();
 bucketPromise.then(function (data) {
   console.log("Successfully created " + bucketName);
 })
