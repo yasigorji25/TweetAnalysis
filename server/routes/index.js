@@ -49,12 +49,6 @@ try {
 }
 */
 
-
-  new AWS.S3({ apiVersion: '2006-03-01' }).getObject({ Bucket: bucketName, Key: 'twitter-politics-445441'}, async (err, result) => {
-    // Check if a result got in 1 hour in the s3 bucket, if true, use the data and store the data in cache
-    console.log(JSON.parse(result.Body));
-    })
-
 const token = 'AAAAAAAAAAAAAAAAAAAAAF0zIgEAAAAADFW0UWDGP3X3gK4e1ldfjSBBYxE%3DIOFKXbD7Ix0iRaD2YQCi4zCxYNrk7TGZcjHhGNyPtRq08wvtHh';
 
 const endpointUrl = 'https://api.twitter.com/2/tweets/search/recent'
@@ -82,6 +76,7 @@ router.get('/line', (req, res) => {
             try {
               const result = await new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params_line).promise();
               console.log(s3Key);
+              console.log(JSON.parse(result.Body));
               const resultJSON = JSON.parse(result.Body);
               const responseTrump = resultJSON.Trump;
               const responseBiden = resultJSON.Biden;
