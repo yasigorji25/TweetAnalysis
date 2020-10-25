@@ -57,7 +57,7 @@ router.get('/line', (req, res) => {
   (async () => {
     try {
       const currentTime = parseInt(Date.now() / 60 / 60 / 1000);
-      const hashtagList = ['election', 'democrates', 'politics', 'republican'];
+      const hashtagList = ['election', 'democrats', 'politics', 'republican'];
       let sentiResLine = [];
       for (let i = currentTime - 168; i <= currentTime; i++) {
         let date = new Date(i * 60 * 60 * 1000);
