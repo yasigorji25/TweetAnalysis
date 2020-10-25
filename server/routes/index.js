@@ -82,6 +82,7 @@ router.get('/line', (req, res) => {
             const params_line = { Bucket: bucketName, Key: s3Key };
             try {
               const result = await new AWS.S3({ apiVersion: '2006-03-01' }).getObject(params_line).promise();
+              console.log(s3Key);
               const resultJSON = JSON.parse(result.Body);
               const responseTrump = resultJSON.Trump;
               const responseBiden = resultJSON.Biden;
